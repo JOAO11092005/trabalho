@@ -1,0 +1,32 @@
+{
+    "2024-09-02": {
+        "valor_diaria": 45.0,
+        "status": "N\u00e3o pago"
+    },
+    "2024-10-02": {
+        "status": "Pendente",
+        "valor_diaria": 45.0,
+        "meio_periodo": true
+    },
+    "2024-10-03": {
+        "status": "Pendente",
+        "valor_diaria": 45.0,
+        "meio_periodo": true
+    },
+    "2024-10-04": {
+        "status": "Pendente",
+        "valor_diaria": 45.0,
+        "meio_periodo": true
+    },
+    "2024-10-05": {
+        "status": "Pendente",
+        "valor_diaria": 45.0,
+        "meio_periodo": true
+    },
+    "2024-10-06": {
+        "status": "Cancelado: n\u00e3o trabalho nesse dia \r\n",
+        "valor_diaria": 45.0,
+        "meio_periodo": true,
+        "indisponibilidade": 1
+    }
+}
