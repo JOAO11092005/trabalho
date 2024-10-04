@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Diárias</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: #007BFF;
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+        }
+
+        header nav {
+            margin: 10px 0;
+        }
+
+        header nav a {
+            color: #fff;
+            margin: 0 15px;
+            text-decoration: none;
+        }
+
+        .container {
+            width: 90%;
+            height: 80vh;
+            margin: auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+       #diasTrabalhados{
+        margin-left: 20px;
+       }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #ccc;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        button {
+            padding: 8px 12px;
+            background-color: #28A745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        .form-group {
+            margin: 15px 0;
+        }
+
+        input[type="date"],
+        input[type="number"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 200px;
+            margin-right: 10px;
+        }
+
+        #mensagem {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            border: 1px solid #007BFF;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+        #mensagem h3 {
+            margin: 0 0 10px;
+        }
+
+        #mensagem button {
+            background-color: #007BFF;
+            border: none;
+            padding: 10px 15px;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #mensagem button:hover {
+            background-color: #0056b3;
+        }
+
+        #diasTrabalhados,
+        #saldo {
+            margin: 10px 0;
+            font-size: 18px;
+        }
+
+        @media (max-width: 600px) {
+            nav {
+                display: none;
+                /* Esconda o menu padrão */
+            }
+
+            td :button {
+                padding: 10px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .menu-toggle {
+                display: flex;
+                /* Mostre o menu hambúrguer */
+            }
+
+            .active {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 100%;
+                position: absolute;
+                top: 50px;
+                /* Ajuste conforme necessário */
+                left: 0;
+                background-color: #007BFF;
+            }
+
+            .active a {
+                padding: 10px 0;
+                border-bottom: 1px solid #fff;
+                /* Adicione uma borda entre os links */
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-container">
+            <h1>Gerenciamento de Diárias</h1>
+            <div class="menu-toggle" id="menuToggle">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+        <nav id="navbar">
+            <a href="#" id="adicionar">Adicionar Diária</a>
+            <a href="#" id="total">Ver Total</a>
+            <a href="#" id="saldo">Ver Saldo</a>
+            <a href="#" id="logout">Logout</a>
+        </nav>
+    </header>
+    <div class="container">
+        <div id="form-container" style="display:none;">
+            <h2>Adicionar Diária</h2>
+            <div class="form-group">
+                <input type="date" id="data" required>
+                <input type="number" id="valor" placeholder="Valor" required>
+                <button id="btnAdicionarDiaria">Adicionar</button>
+            </div>
+        </div>
+
+        <h2>Diárias Registradas</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Descrição</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="diariasBody">
+                <tr>
+                    <td colspan="2">Nenhuma diária registrada.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div id="diasTrabalhados"></div>
+        <div id="saldo"></div>
+    </div>
+
+    <div id="mensagem">
+        <h3 id="mensagem-titulo"></h3>
+        <p id="mensagem-texto"></p>
+        <button id="btnFecharMensagem">Fechar</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.17.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, getDocs, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/9.17.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVE0lxuz1YPkSlEDF4O9XokV-vVTvp71c",
+            authDomain: "jsts-dfe35.firebaseapp.com",
+            databaseURL: "https://jsts-dfe35-default-rtdb.firebaseio.com",
+            projectId: "jsts-dfe35",
+            storageBucket: "jsts-dfe35.appspot.com",
+            messagingSenderId: "770639179193",
+            appId: "1:770639179193:web:cc83e5dc86b7ef17295a68",
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        function mostrarMensagem(texto, titulo = 'Mensagem') {
+            document.getElementById('mensagem-titulo').innerText = titulo;
+            document.getElementById('mensagem-texto').innerText = texto;
+            document.getElementById('mensagem').style.display = 'block';
+        }
+
+        document.getElementById('btnFecharMensagem').addEventListener('click', () => {
+            document.getElementById('mensagem').style.display = 'none';
+        });
+
+        document.getElementById('btnAdicionarDiaria').addEventListener('click', async () => {
+            const data = document.getElementById('data').value;
+            const valor = document.getElementById('valor').value;
+
+            if (data && valor) {
+                const user = auth.currentUser;
+
+                if (!user) {
+                    mostrarMensagem('Você precisa estar logado para adicionar uma diária.');
+                    return;
+                }
+
+                try {
+                    await addDoc(collection(db, 'diarias'), {
+                        userId: user.uid,
+                        data: data,
+                        valor: parseFloat(valor)
+                    });
+                    mostrarMensagem('Diária adicionada com sucesso!');
+                    listarDiarias();
+                    document.getElementById('data').value = '';
+                    document.getElementById('valor').value = '';
+                } catch (error) {
+                    console.error('Erro ao adicionar diária: ', error);
+                    mostrarMensagem('Erro ao adicionar diária: ' + error.message);
+                }
+            } else {
+                mostrarMensagem('Preencha todos os campos!');
+            }
+        });
+
+        async function atualizarValorDiaria(diariaId, valorNovo) {
+            try {
+                await updateDoc(doc(db, 'diarias', diariaId), { valor: valorNovo });
+                mostrarMensagem(`Diária atualizada para R$ ${valorNovo.toFixed(2)}`);
+                listarDiarias();
+            } catch (error) {
+                console.error('Erro ao atualizar diária: ', error);
+                mostrarMensagem('Erro ao atualizar diária: ' + error.message);
+            }
+        }
+
+        async function removerDiaria(diariaId) {
+            try {
+                await deleteDoc(doc(db, 'diarias', diariaId));
+                mostrarMensagem('Diária removida com sucesso!');
+                listarDiarias();
+            } catch (error) {
+                console.error('Erro ao remover diária: ', error);
+                mostrarMensagem('Erro ao remover diária: ' + error.message);
+            }
+        }
+
+        async function listarDiarias() {
+            const user = auth.currentUser;
+
+            const q = query(collection(db, 'diarias'), where('userId', '==', user.uid));
+            const snapshot = await getDocs(q);
+
+            const diariasBody = document.getElementById('diariasBody');
+            diariasBody.innerHTML = '';
+
+            let totalValor = 0;
+            let diasTrabalhados = 0;
+
+            snapshot.forEach((doc) => {
+                const diaria = doc.data();
+                const tr = document.createElement('tr');
+
+                const tdDescricao = document.createElement('td');
+                tdDescricao.textContent = `${diaria.data} - R$ ${diaria.valor.toFixed(2)}`;
+                tr.appendChild(tdDescricao);
+
+                const tdAcoes = document.createElement('td');
+
+                const btnRemover = document.createElement('button');
+                btnRemover.textContent = 'Remover';
+                btnRemover.onclick = () => removerDiaria(doc.id);
+
+                const btnAtualizar = document.createElement('button');
+                btnAtualizar.textContent = 'Atualizar';
+                btnAtualizar.onclick = () => {
+                    const novoValor = prompt('Novo valor para a diária:', diaria.valor);
+                    if (novoValor) {
+                        atualizarValorDiaria(doc.id, parseFloat(novoValor));
+                    }
+                };
+
+                tdAcoes.appendChild(btnAtualizar);
+                tdAcoes.appendChild(btnRemover);
+                tr.appendChild(tdAcoes);
+                diariasBody.appendChild(tr);
+
+                totalValor += diaria.valor;
+                diasTrabalhados++;
+            });
+
+            if (diasTrabalhados === 0) {
+                diariasBody.innerHTML = '<tr><td colspan="2">Nenhuma diária registrada.</td></tr>';
+            }
+
+            // Atualizar exibição dos dias trabalhados e saldo
+            document.getElementById('diasTrabalhados').innerText = `Dias Trabalhados: ${diasTrabalhados}`;
+            document.getElementById('saldo').innerText = `Saldo Total: R$ ${totalValor.toFixed(2)}`;
+        }
+
+        document.getElementById('adicionar').addEventListener('click', () => {
+            document.getElementById('form-container').style.display = 'block';
+            listarDiarias();
+        });
+
+        document.getElementById('total').addEventListener('click', () => {
+            listarDiarias();
+        });
+
+        document.getElementById('logout').addEventListener('click', async () => {
+            await signOut(auth);
+            mostrarMensagem('Você foi desconectado com sucesso!');
+        });
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                listarDiarias();
+            } else {
+                mostrarMensagem('Você precisa estar logado para ver suas diárias.');
+            }
+        });
+        const menuToggle = document.getElementById("menuToggle");
+        const navbar = document.getElementById("navbar");
+
+        menuToggle.addEventListener("click", () => {
+            navbar.classList.toggle("active");
+        });
+        const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+
+admin.initializeApp();
+
+exports.adicionarDiariaAutomaticamente = functions.pubsub.schedule('every 24 hours').onRun(async (context) => {
+    const hoje = new Date();
+    const amanha = new Date(hoje);
+    amanha.setDate(hoje.getDate() + 1); // Define amanhã
+
+    const diaDaSemana = amanha.getDay();
+    if (diaDaSemana !== 0 && diaDaSemana !== 6) { // 0 = Domingo, 6 = Sábado
+        const valorDiaria = 100; // Defina o valor da diária aqui
+        const usersSnapshot = await admin.firestore().collection('users').get(); // Obtém todos os usuários
+
+        usersSnapshot.forEach(async (userDoc) => {
+            const userId = userDoc.id;
+            await admin.firestore().collection('diarias').add({
+                userId: userId,
+                data: amanha.toISOString().split('T')[0], // Formato YYYY-MM-DD
+                valor: valorDiaria
+            });
+        });
+
+        console.log('Diárias adicionadas para amanhã!');
+    } else {
+        console.log('Amanhã não é um dia útil, não serão adicionadas diárias.');
+    }
+});
+
+    </script>
+</body>
+
+</html>
